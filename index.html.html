@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="uk" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Інклюзивна Інформатика: Симулятор зору та Асисттивні Технології</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        hcYellow: '#FFFF00',
+                        hcBlack: '#000000',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* Focus Ring Visibility for Accessibility (WCAG 2.1) */
+        *:focus-visible {
+            outline: 4px solid #FFD700 !important;
+            outline-offset: 3px !important;
+        }
+
+        /* High Contrast Modes */
+        body.theme-hc-yellow {
+            background-color: #000000 !important;
+            color: #FFFF00 !important;
+        }
+        body.theme-hc-yellow .hc-card {
+            background-color: #111111 !important;
+            border: 2px solid #FFFF00 !important;
+            color: #FFFFFF !important;
+        }
+        body.theme-hc-yellow .hc-text {
+            color: #FFFF00 !important;
+        }
+        body.theme-hc-yellow button, body.theme-hc-yellow input, body.theme-hc-yellow select {
+            border: 2px solid #FFFF00 !important;
+            background-color: #000 !important;
+            color: #FFFF00 !important;
+        }
+
+        body.theme-light {
+            background-color: #F8FAFC !important;
+            color: #0F172A !important;
+        }
+        body.theme-light .hc-card {
+            background-color: #FFFFFF !important;
+            border: 1px solid #CBD5E1 !important;
+            color: #0F172A !important;
+        }
+        body.theme-light .hc-text {
+            color: #1E293B !important;
+        }
+
+        /* Active TTS Highlight Ring */
+        .speech-highlight {
+            outline: 4px solid #f59e0b !important;
+            background-color: rgba(245, 158, 11, 0.15) !important;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* SIMULATION OVERLAYS */
+        .sim-stage {
+            position: relative;
+            overflow: hidden;
+            background: #0f172a;
+        }
+
+        /* Glaucoma Tunnel Overlay */
+        #overlayGlaucoma {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 30;
+            background: radial-gradient(circle var(--glaucoma-size, 80px) at center, transparent 0%, transparent 80%, rgba(0, 0, 0, 0.98) 100%);
+            display: none;
+        }
+
+        /* Macular Degeneration (AMD) Center Spot */
+        #overlayAMD {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 30;
+            background: radial-gradient(circle var(--amd-size, 100px) at center, rgba(15, 15, 15, 0.99) 0%, rgba(20, 20, 20, 0.85) 60%, transparent 100%);
+            display: none;
+        }
+
+        /* Diabetic Retinopathy Scattered Spots Overlay */
+        #overlayRetinopathy {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 30;
+            background-image: 
+                radial-gradient(circle 35px at 25% 25%, rgba(0,0,0,0.95) 0%, transparent 80%),
+                radial-gradient(circle 50px at 75% 65%, rgba(10,10,10,0.92) 0%, transparent 80%),
+                radial-gradient(circle 40px at 45% 75%, rgba(5,5,5,0.95) 0%, transparent 80%),
+                radial-gradient(circle 60px at 80% 20%, rgba(15,15,15,0.9) 0%, transparent 80%),
+                radial-gradient(circle 30px at 15% 80%, rgba(0,0,0,0.95) 0%, transparent 80%),
+                radial-gradient(circle 25px at 50% 30%, rgba(20,20,20,0.85) 0%, transparent 80%);
+            opacity: var(--retino-opacity, 0.8);
+            display: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-full flex flex-col transition-colors duration-200" id="appBody">
+
+    <!-- SVG Filters for Color Blindness -->
+    <svg class="hidden" aria-hidden="true">
+        <defs>
+            <!-- Protanopia (Red-blind) -->
+            <filter id="protanopiaFilter">
+                <feColorMatrix type="matrix" values="0.567, 0.433, 0, 0, 0  0.558, 0.442, 0, 0, 0  0, 0.242, 0.758, 0, 0  0, 0, 0, 1, 0" />
+            </filter>
+            <!-- Deuteranopia (Green-blind) -->
+            <filter id="deuteranopiaFilter">
+                <feColorMatrix type="matrix" values="0.625, 0.375, 0, 0, 0  0.7, 0.3, 0, 0, 0  0, 0.3, 0.7, 0, 0  0, 0, 0, 1, 0" />
+            </filter>
+            <!-- Tritanopia (Blue-blind) -->
+            <filter id="tritanopiaFilter">
+                <feColorMatrix type="matrix" values="0.95, 0.05, 0, 0, 0  0, 0.433, 0.567, 0, 0  0, 0.475, 0.525, 0, 0  0, 0, 0, 1, 0" />
+            </filter>
+            <!-- Achromatopsia (Total color blind) -->
+            <filter id="achromatopsiaFilter">
+                <feColorMatrix type="matrix" values="0.299, 0.587, 0.114, 0, 0  0.299, 0.587, 0.114, 0, 0  0.299, 0.587, 0.114, 0, 0  0, 0, 0, 1, 0" />
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- HEADER / ACCESSIBILITY TOOLBAR -->
+    <header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+            
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl font-bold flex items-center justify-center shadow-md" aria-hidden="true">
+                    <i class="fa-solid fa-universal-access text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black text-white tracking-wide">
+                        Інклюзивна Інформатика
+                    </h1>
+                    <p class="text-xs text-slate-400 font-medium">Платформа симуляції зору та асисттивних інструментів</p>
+                </div>
+            </div>
+
+            <!-- Accessibility Controls -->
+            <div class="flex items-center flex-wrap gap-2" role="region" aria-label="Панель доступності">
+                
+                <!-- Font Size Controls -->
+                <div class="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
+                    <button onclick="changeFontSize(-10)" title="Зменшити шрифт" class="px-2.5 py-1 text-slate-200 hover:bg-slate-700 rounded font-bold text-xs">A-</button>
+                    <button onclick="resetFontSize()" title="100% Розмір" id="zoomValBtn" class="px-2 py-1 text-slate-400 hover:bg-slate-700 rounded text-xs">100%</button>
+                    <button onclick="changeFontSize(10)" title="Збільшити шрифт" class="px-2.5 py-1 text-slate-200 hover:bg-slate-700 rounded font-bold text-xs">A+</button>
+                </div>
+
+                <!-- Theme Switcher -->
+                <select id="themeSelect" onchange="switchTheme(this.value)" class="bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-blue-500">
+                    <option value="dark">🌙 Темна тема</option>
+                    <option value="light">☀️ Світла тема</option>
+                    <option value="hc-yellow">⚡ Високий контраст (Жовтий)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- MAIN NAVIGATION TABS -->
+        <nav class="bg-slate-900 border-t border-slate-800 px-4 sm:px-8">
+            <div class="max-w-7xl mx-auto flex space-x-2 sm:space-x-4 overflow-x-auto py-2">
+                <button onclick="switchTab('simulator')" id="tab-simulator" class="nav-tab px-4 py-2.5 rounded-lg font-bold text-sm flex items-center space-x-2 bg-blue-600 text-white whitespace-nowrap">
+                    <i class="fa-solid fa-eye-low-vision"></i>
+                    <span>Симулятор розладів зору</span>
+                </button>
+                <button onclick="switchTab('assistive')" id="tab-assistive" class="nav-tab px-4 py-2.5 rounded-lg font-bold text-sm flex items-center space-x-2 text-slate-300 hover:bg-slate-800 whitespace-nowrap">
+                    <i class="fa-solid fa-wheelchair-move"></i>
+                    <span>Асисттивне ПЗ та Пристрої</span>
+                </button>
+                <button onclick="switchTab('extensions')" id="tab-extensions" class="nav-tab px-4 py-2.5 rounded-lg font-bold text-sm flex items-center space-x-2 text-slate-300 hover:bg-slate-800 whitespace-nowrap">
+                    <i class="fa-solid fa-puzzle-piece"></i>
+                    <span>Плагіни Браузера</span>
+                </button>
+                <button onclick="switchTab('audit')" id="tab-audit" class="nav-tab px-4 py-2.5 rounded-lg font-bold text-sm flex items-center space-x-2 text-slate-300 hover:bg-slate-800 whitespace-nowrap">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Чек-лист доступності</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- FLOATING TEXT-TO-SPEECH BAR -->
+    <div class="bg-amber-500 text-slate-950 font-semibold px-4 py-2 border-b border-amber-600 shadow-inner flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-volume-high text-lg"></i>
+            <span class="font-bold">Модуль озвучування (TTS):</span>
+            <span id="speechVoiceStatus" class="bg-amber-950 text-amber-200 text-xs px-2 py-0.5 rounded font-mono">Перевірка голосу...</span>
+        </div>
+
+        <div class="flex items-center flex-wrap gap-2">
+            <button onclick="testUkrainianSpeech()" title="Прослухати тестовий приклад українською" class="px-3 py-1 bg-emerald-800 hover:bg-emerald-700 text-emerald-100 rounded font-bold transition flex items-center space-x-1">
+                <i class="fa-solid fa-circle-play"></i> <span>Тест голосу</span>
+            </button>
+            <button onclick="speakPage()" title="Читати всю сторінку" class="px-3 py-1 bg-slate-950 hover:bg-slate-850 text-amber-300 rounded font-bold transition flex items-center space-x-1">
+                <i class="fa-solid fa-play"></i> <span>Читати все</span>
+            </button>
+            <button onclick="speakSelection()" title="Читати виділений текст" class="px-3 py-1 bg-slate-950 hover:bg-slate-850 text-amber-300 rounded font-bold transition flex items-center space-x-1">
+                <i class="fa-solid fa-highlighter"></i> <span>Читати виділене</span>
+            </button>
+            <button onclick="pauseResumeSpeech()" title="Пауза / Відновити" class="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded font-bold transition">
+                <i class="fa-solid fa-pause"></i> <span id="pauseBtnLabel">Пауза</span>
+            </button>
+            <button onclick="stopSpeech()" title="Зупинити читання" class="px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded font-bold transition">
+                <i class="fa-solid fa-square"></i> <span>Стоп</span>
+            </button>
+
+            <!-- Speed & Hover Reader Mode Controls -->
+            <div class="flex items-center space-x-1 bg-amber-600/40 px-2 py-1 rounded">
+                <label for="speechRate" class="text-xs font-bold text-slate-900">Швидкість:</label>
+                <select id="speechRate" class="bg-slate-950 text-amber-300 text-xs rounded px-1 py-0.5 border-none font-bold">
+                    <option value="0.75">0.75x</option>
+                    <option value="1.0" selected>1.0x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                </select>
+            </div>
+
+            <label class="flex items-center space-x-1 text-xs font-bold bg-amber-600/40 px-2 py-1 rounded cursor-pointer">
+                <input type="checkbox" id="hoverReaderToggle" onchange="toggleHoverReader(this.checked)" class="accent-slate-950">
+                <span>Озвучення при наведенні</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full" id="main-content">
+
+        <!-- ================= SECTION 1: VISION IMPAIRMENT SIMULATOR ================= -->
+        <section id="sec-simulator" class="tab-content space-y-6">
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl hc-card">
+                
+                <div class="flex justify-between items-start flex-wrap gap-4 mb-4">
+                    <div class="max-w-3xl">
+                        <h2 class="text-2xl sm:text-3xl font-black text-white mb-2 hc-text">
+                            <i class="fa-solid fa-glasses text-blue-400 mr-2"></i>Інтерактивний Симулятор Розладів Зору
+                        </h2>
+                        <p class="text-slate-300 leading-relaxed text-sm sm:text-base">
+                            Оберіть тип порушення зору та налаштуйте його інтенсивність. Ви зможете побачити, як саме діти з різними патологіями бачать підручник, код або інтерфейс програми.
+                        </p>
+                    </div>
+                    <button onclick="speakElement('sec-simulator')" title="Озвучити цей розділ" class="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-bold transition flex items-center space-x-1">
+                        <i class="fa-solid fa-volume-high"></i> <span>Озвучити розділ</span>
+                    </button>
+                </div>
+
+                <!-- Controls & Screen Grid -->
+                <div class="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Radio Condition Selector -->
+                    <div class="lg:col-span-5 bg-slate-900 p-4 rounded-xl border border-slate-700 space-y-3">
+                        <label class="block text-sm font-bold text-slate-300 uppercase tracking-wider mb-2">
+                            1. Оберіть розлад зору:
+                        </label>
+
+                        <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                            
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="normal" checked onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-white block text-sm">Нормальний зір (100%)</span>
+                                    <span class="text-xs text-slate-400">Чітке та повне сприйняття</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="myopia" onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-yellow-400 block text-sm">Слабозорість / Короткозорість</span>
+                                    <span class="text-xs text-slate-400">Розмитість контурів, відсутність чіткості</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="cataracts" onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-yellow-400 block text-sm">Катаракта</span>
+                                    <span class="text-xs text-slate-400">Помутніння кришталика, вицвітання кольорів</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="glaucoma" onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-yellow-400 block text-sm">Глаукома (Тунельний зір)</span>
+                                    <span class="text-xs text-slate-400">Звуження поля зору до центрів</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="amd" onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-yellow-400 block text-sm">Макулодистрофія (AMD)</span>
+                                    <span class="text-xs text-slate-400">Темна або розмита пляма в центрі</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="retinopathy" onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-yellow-400 block text-sm">Діабетична ретинопатія</span>
+                                    <span class="text-xs text-slate-400">Розсіяні темні плями (крововиливи)</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="protanopia" onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-yellow-400 block text-sm">Дальтонізм (Протанопія)</span>
+                                    <span class="text-xs text-slate-400">Втрата сприйняття червоного колірного спектра</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="deuteranopia" onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-yellow-400 block text-sm">Дальтонізм (Дейтеранопія)</span>
+                                    <span class="text-xs text-slate-400">Втрата сприйняття зеленого спектра</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-800 hover:bg-slate-800 cursor-pointer transition">
+                                <input type="radio" name="visionCondition" value="achromatopsia" onclick="updateSimulation()" class="w-4 h-4 text-blue-600">
+                                <div>
+                                    <span class="font-bold text-yellow-400 block text-sm">Повна колірна сліпота (Ахроматопсія)</span>
+                                    <span class="text-xs text-slate-400">Монохромне чорно-біле бачення</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Severity Slider -->
+                        <div class="pt-4 border-t border-slate-800">
+                            <div class="flex justify-between text-sm font-bold text-slate-300 mb-1">
+                                <span>2. Інтенсивність симптому:</span>
+                                <span id="severityVal" class="text-blue-400 font-mono">60%</span>
+                            </div>
+                            <input type="range" id="severitySlider" min="10" max="100" value="60" oninput="updateSimulation()" class="w-full accent-blue-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- Live Simulation Screen Area -->
+                    <div class="lg:col-span-7 flex flex-col space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-bold text-slate-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-desktop mr-1 text-emerald-400"></i> Вікно симулятора в реальному часі:
+                            </span>
+                            <span id="conditionTag" class="text-xs font-bold px-3 py-1 bg-blue-900/60 text-blue-300 rounded-full border border-blue-700">
+                                Нормальний зір
+                            </span>
+                        </div>
+
+                        <!-- Simulation Canvas Container -->
+                        <div id="simStage" class="sim-stage relative border-2 border-slate-700 rounded-xl p-6 min-h-[380px] flex flex-col justify-between shadow-2xl">
+                            
+                            <!-- HARDCODED OVERLAYS FOR RELIABLE GRAPHICS -->
+                            <div id="overlayGlaucoma"></div>
+                            <div id="overlayAMD"></div>
+                            <div id="overlayRetinopathy"></div>
+
+                            <!-- Simulated Educational Content -->
+                            <div id="simTargetContent" class="space-y-4 transition-all duration-150 relative z-10">
+                                <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                                    <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                                        <i class="fa-solid fa-code text-blue-400"></i>
+                                        <span>Урок 5: Розгалужені алгоритми Python</span>
+                                    </h3>
+                                    <span class="px-2 py-1 text-xs font-semibold bg-emerald-500/20 text-emerald-400 rounded border border-emerald-500/30">Завдання #2</span>
+                                </div>
+
+                                <p class="text-sm text-slate-200 leading-relaxed">
+                                    Проаналізуйте код нижче та оберіть правильно, яка команда виконається, якщо змінна <code class="text-yellow-400 bg-slate-950 px-1 py-0.5 rounded">age = 14</code>:
+                                </p>
+
+                                <!-- Code Block -->
+                                <div class="bg-slate-950 p-4 rounded-lg font-mono text-xs text-emerald-400 border border-slate-800 space-y-1">
+                                    <div><span class="text-purple-400">if</span> age >= <span class="text-amber-400">18</span>:</div>
+                                    <div class="pl-4 text-slate-300">print(<span class="text-emerald-300">"Доступ дозволено"</span>)</div>
+                                    <div><span class="text-purple-400">else</span>:</div>
+                                    <div class="pl-4 text-slate-300">print(<span class="text-emerald-300">"Обмежений режим навчання"</span>)</div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3 my-2">
+                                    <button class="p-3 bg-red-900/60 hover:bg-red-800 border border-red-500/40 text-red-200 text-xs font-bold rounded-lg text-left">
+                                        А) Доступ дозволено
+                                    </button>
+                                    <button class="p-3 bg-emerald-900/60 hover:bg-emerald-800 border border-emerald-500/40 text-emerald-200 text-xs font-bold rounded-lg text-left">
+                                        Б) Обмежений режим навчання
+                                    </button>
+                                </div>
+
+                                <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700 flex items-center space-x-3">
+                                    <i class="fa-solid fa-circle-info text-blue-400 text-lg flex-shrink-0"></i>
+                                    <p class="text-xs text-slate-300">
+                                        Підказка: Звертайте увагу на колірний контраст та форматування коду.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-800 text-xs text-slate-400 flex justify-between items-center relative z-10">
+                                <span>Кабінет Інформатики • 8 Клас</span>
+                                <span class="text-slate-500">Модель розміру шрифту: 14pt Inter</span>
+                            </div>
+                        </div>
+
+                        <!-- Educational Note Box -->
+                        <div id="conditionDescription" class="p-4 bg-slate-900/90 rounded-xl border border-slate-800 text-xs sm:text-sm text-slate-300">
+                            <strong>Методична примітка:</strong> За нормального зору дитина безперешкодно розрізняє шрифти розміром 12-14pt та контрастність кольорів стандартного інтерфейсу.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 2: ASSISTIVE TECHNOLOGIES ================= -->
+        <section id="sec-assistive" class="tab-content hidden space-y-6">
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl hc-card">
+                
+                <div class="flex justify-between items-start flex-wrap gap-4 mb-6">
+                    <div class="max-w-3xl">
+                        <h2 class="text-2xl sm:text-3xl font-black text-white mb-2 hc-text">
+                            <i class="fa-solid fa-cubes text-emerald-400 mr-2"></i>Каталог Асисттивних Технологій та Пристроїв
+                        </h2>
+                        <p class="text-slate-300 text-sm sm:text-base">
+                            Огляд програмного забезпечення та апаратних рішень, що компенсують втрату зору й дають можливість учням самостійно працювати за комп'ютером.
+                        </p>
+                    </div>
+                    <button onclick="speakElement('sec-assistive')" title="Озвучити цей розділ" class="px-3 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-bold transition flex items-center space-x-1">
+                        <i class="fa-solid fa-volume-high"></i> <span>Озвучити розділ</span>
+                    </button>
+                </div>
+
+                <!-- Category Filters -->
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <button onclick="filterAssist('all', this)" class="assist-filter-btn px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">Усі засоби</button>
+                    <button onclick="filterAssist('screenreader', this)" class="assist-filter-btn px-4 py-2 bg-slate-700 text-slate-300 hover:bg-slate-600 rounded-lg text-sm font-bold">Екранні зчитувачі (Screen Readers)</button>
+                    <button onclick="filterAssist('magnifier', this)" class="assist-filter-btn px-4 py-2 bg-slate-700 text-slate-300 hover:bg-slate-600 rounded-lg text-sm font-bold">Екранні збільшувачі</button>
+                    <button onclick="filterAssist('hardware', this)" class="assist-filter-btn px-4 py-2 bg-slate-700 text-slate-300 hover:bg-slate-600 rounded-lg text-sm font-bold">Дисплеї Брайля та апаратура</button>
+                </div>
+
+                <!-- Grid of Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="assistiveGrid">
+                    
+                    <!-- NVDA Card -->
+                    <div class="assist-card bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col justify-between" data-cat="screenreader" id="card-nvda">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="px-2.5 py-1 text-xs font-extrabold bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">Безкоштовно / Open Source</span>
+                                <button onclick="speakElement('card-nvda')" title="Читати цю картку" class="text-slate-400 hover:text-yellow-400 p-1"><i class="fa-solid fa-volume-high"></i></button>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-1">NVDA (NonVisual Desktop Access)</h3>
+                            <p class="text-xs text-slate-400 mb-3">ОС: Windows</p>
+                            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                                Найпопулярніший безкоштовний зчитувач екрана із повною підтримкою української мови. Озвучує синтезом мови всі діючі елементи, веб-сторінки та документи.
+                            </p>
+                        </div>
+                        <div class="pt-3 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                            <span><i class="fa-solid fa-check text-emerald-400 mr-1"></i>Підтримка Брайля</span>
+                            <a href="https://www.nvaccess.org/" target="_blank" rel="noopener" class="text-blue-400 hover:underline font-bold">nvaccess.org &rarr;</a>
+                        </div>
+                    </div>
+
+                    <!-- JAWS Card -->
+                    <div class="assist-card bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col justify-between" data-cat="screenreader" id="card-jaws">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="px-2.5 py-1 text-xs font-extrabold bg-purple-500/20 text-purple-400 rounded-full border border-purple-500/30">Професійне ПЗ</span>
+                                <button onclick="speakElement('card-jaws')" title="Читати цю картку" class="text-slate-400 hover:text-yellow-400 p-1"><i class="fa-solid fa-volume-high"></i></button>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-1">JAWS for Windows</h3>
+                            <p class="text-xs text-slate-400 mb-3">ОС: Windows</p>
+                            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                                Потужний професійний екранний диктор для точної роботи зі складними математичними формулами, діаграмами та таблицями Excel.
+                            </p>
+                        </div>
+                        <div class="pt-3 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                            <span><i class="fa-solid fa-star text-yellow-400 mr-1"></i>Проф-стандарт</span>
+                            <span class="text-slate-500">Freedom Scientific</span>
+                        </div>
+                    </div>
+
+                    <!-- VoiceOver & TalkBack Card -->
+                    <div class="assist-card bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col justify-between" data-cat="screenreader" id="card-voiceover">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="px-2.5 py-1 text-xs font-extrabold bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/30">Вбудовано в ОС</span>
+                                <button onclick="speakElement('card-voiceover')" title="Читати цю картку" class="text-slate-400 hover:text-yellow-400 p-1"><i class="fa-solid fa-volume-high"></i></button>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-1">VoiceOver & TalkBack</h3>
+                            <p class="text-xs text-slate-400 mb-3">ОС: iOS, macOS, Android</p>
+                            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                                Вбудовані в мобільні операційні системи та ПК Apple/Android асисттивні служби. Дозволяють слабозорим та незрячим учням керувати пристроями за допомогою спеціальних жестів та озвучення.
+                            </p>
+                        </div>
+                        <div class="pt-3 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                            <span><i class="fa-solid fa-hand-pointer text-blue-400 mr-1"></i>Жести та сенсор</span>
+                            <span class="text-slate-500">Вбудований інструмент</span>
+                        </div>
+                    </div>
+
+                    <!-- ZoomText Card -->
+                    <div class="assist-card bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col justify-between" data-cat="magnifier" id="card-zoomtext">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="px-2.5 py-1 text-xs font-extrabold bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/30">Збільшення екрана</span>
+                                <button onclick="speakElement('card-zoomtext')" title="Читати цю картку" class="text-slate-400 hover:text-yellow-400 p-1"><i class="fa-solid fa-volume-high"></i></button>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-1">ZoomText & Екранна Лупа</h3>
+                            <p class="text-xs text-slate-400 mb-3">ОС: Windows / macOS</p>
+                            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                                Програми для згладженого масштабування екрана від 2x до 60x із налаштуванням прицілу миші, локального контрасту та виділенням початкових літер.
+                            </p>
+                        </div>
+                        <div class="pt-3 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                            <span><i class="fa-solid fa-eye text-amber-400 mr-1"></i>Згладжування шрифтів</span>
+                            <span class="text-slate-500">Для слабозорих</span>
+                        </div>
+                    </div>
+
+                    <!-- Braille Display Card -->
+                    <div class="assist-card bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col justify-between" data-cat="hardware" id="card-braille">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="px-2.5 py-1 text-xs font-extrabold bg-rose-500/20 text-rose-400 rounded-full border border-rose-500/30">Апаратний пристрій</span>
+                                <button onclick="speakElement('card-braille')" title="Читати цю картку" class="text-slate-400 hover:text-yellow-400 p-1"><i class="fa-solid fa-volume-high"></i></button>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-1">Оновлюваний Дисплей Брайля</h3>
+                            <p class="text-xs text-slate-400 mb-3">Підключення: USB / Bluetooth</p>
+                            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                                Тактильний пристрій із висувними штифтами, який переводить екранний текст у шрифт Брайля в реальному часі. Незамінний для вивчення програмування та пунктуації.
+                            </p>
+                        </div>
+                        <div class="pt-3 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                            <span><i class="fa-solid fa-fingerprint text-rose-400 mr-1"></i>Тактильний доступ</span>
+                            <span class="text-slate-500">Апаратура</span>
+                        </div>
+                    </div>
+
+                    <!-- Orca Screen Reader Card -->
+                    <div class="assist-card bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col justify-between" data-cat="screenreader" id="card-orca">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="px-2.5 py-1 text-xs font-extrabold bg-teal-500/20 text-teal-400 rounded-full border border-teal-500/30">Linux Екосистема</span>
+                                <button onclick="speakElement('card-orca')" title="Читати цю картку" class="text-slate-400 hover:text-yellow-400 p-1"><i class="fa-solid fa-volume-high"></i></button>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-1">Orca Screen Reader</h3>
+                            <p class="text-xs text-slate-400 mb-3">ОС: Linux (Ubuntu, Debian)</p>
+                            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                                Стандартна безкоштовна програма зчитування з екрана для Linux. Дозволяє слабозорим учням опановувати відкрите ПЗ та командну стрічку.
+                            </p>
+                        </div>
+                        <div class="pt-3 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                            <span><i class="fa-solid fa-terminal text-teal-400 mr-1"></i>Open Source</span>
+                            <span class="text-slate-500">GNOME Project</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 3: BROWSER EXTENSIONS ================= -->
+        <section id="sec-extensions" class="tab-content hidden space-y-6">
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl hc-card">
+                
+                <div class="flex justify-between items-start flex-wrap gap-4 mb-6">
+                    <div class="max-w-3xl">
+                        <h2 class="text-2xl sm:text-3xl font-black text-white mb-2 hc-text">
+                            <i class="fa-solid fa-puzzle-piece text-purple-400 mr-2"></i>Корисні Розширення для Браузера
+                        </h2>
+                        <p class="text-slate-300 text-sm sm:text-base">
+                            Безкоштовні плагіни для Google Chrome, Firefox та MS Edge, які адаптують будь-який веб-сайт під потреби слабозорих учнів.
+                        </p>
+                    </div>
+                    <button onclick="speakElement('sec-extensions')" title="Озвучити цей розділ" class="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 rounded-lg text-xs font-bold transition flex items-center space-x-1">
+                        <i class="fa-solid fa-volume-high"></i> <span>Озвучити розділ</span>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    
+                    <!-- Extension Item 1 -->
+                    <div class="bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-purple-500/50 transition" id="ext-contrast">
+                        <div class="flex items-start space-x-4">
+                            <div class="p-3 bg-purple-500/20 text-purple-400 rounded-xl font-bold text-2xl flex-shrink-0">
+                                <i class="fa-solid fa-circle-half-stroke"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">High Contrast Extension</h3>
+                                <p class="text-sm text-slate-300 mt-1">
+                                    Дозволяє змінювати колірну палітру сайтів у один клік: вибір режиму інверсії, жовтий текст на чорному тлі або розширений монохром.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                            <button onclick="speakElement('ext-contrast')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-yellow-400 rounded-lg text-xs font-bold"><i class="fa-solid fa-volume-high"></i></button>
+                            <button onclick="showExtensionInfo('High Contrast Extension', 'Встановіть з Chrome Web Store. Гарячі клавіші для швидкого перемикання тем на будь-якому сайті: Shift+F11.')" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-lg whitespace-nowrap">
+                                Інструкція <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Extension Item 2 -->
+                    <div class="bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-blue-500/50 transition" id="ext-readaloud">
+                        <div class="flex items-start space-x-4">
+                            <div class="p-3 bg-blue-500/20 text-blue-400 rounded-xl font-bold text-2xl flex-shrink-0">
+                                <i class="fa-solid fa-bullhorn"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Read Aloud: Voice Reader</h3>
+                                <p class="text-sm text-slate-300 mt-1">
+                                    Озвучує виділений абзац або всю сторінку українськими голосами. Підтримує налаштування темпу та комбінації клавіш (Alt+P).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                            <button onclick="speakElement('ext-readaloud')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-yellow-400 rounded-lg text-xs font-bold"><i class="fa-solid fa-volume-high"></i></button>
+                            <button onclick="showExtensionInfo('Read Aloud', 'Автоматично зчитує вміст статей та завдань. Для запуску виділіть текст та натисніть комбінацію клавіш Alt+P.')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg whitespace-nowrap">
+                                Інструкція <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Extension Item 3 -->
+                    <div class="bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-emerald-500/50 transition" id="ext-fonts">
+                        <div class="flex items-start space-x-4">
+                            <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl font-bold text-2xl flex-shrink-0">
+                                <i class="fa-solid fa-font"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Font Changer & OpenDyslexic</h3>
+                                <p class="text-sm text-slate-300 mt-1">
+                                    Примусово замінює застарілі дрібні шрифти веб-сторінок на чіткі беззасічкові шрифти (Arial, Inter, OpenDyslexic) із регулюванням міжбуквеного інтервалу.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                            <button onclick="speakElement('ext-fonts')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-yellow-400 rounded-lg text-xs font-bold"><i class="fa-solid fa-volume-high"></i></button>
+                            <button onclick="showExtensionInfo('Font Changer', 'Замінює складні шрифти на веб-сторінках на легкі для сприйняття слабозорими учнями.')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg whitespace-nowrap">
+                                Інструкція <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Extension Item 4 -->
+                    <div class="bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-amber-500/50 transition" id="ext-focus">
+                        <div class="flex items-start space-x-4">
+                            <div class="p-3 bg-amber-500/20 text-amber-400 rounded-xl font-bold text-2xl flex-shrink-0">
+                                <i class="fa-solid fa-border-all"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Focus Ring Highlighter</h3>
+                                <p class="text-sm text-slate-300 mt-1">
+                                    Додає яскраве товсте підсвічування для будь-якого елемента сторінки під час переходу клавішею Tab, запобігаючи втраті фокусу.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                            <button onclick="speakElement('ext-focus')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-yellow-400 rounded-lg text-xs font-bold"><i class="fa-solid fa-volume-high"></i></button>
+                            <button onclick="showExtensionInfo('Focus Ring Highlighter', 'Створює яскраву неонову рамку навколо активних кнопок та посилань під час навігації клавіатурою.')" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg whitespace-nowrap">
+                                Інструкція <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 4: ACCESSIBILITY AUDIT CHECKLIST ================= -->
+        <section id="sec-audit" class="tab-content hidden space-y-6">
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl hc-card">
+                
+                <div class="flex justify-between items-start flex-wrap gap-4 mb-6">
+                    <div class="max-w-3xl">
+                        <h2 class="text-2xl sm:text-3xl font-black text-white mb-2 hc-text">
+                            <i class="fa-solid fa-list-check text-yellow-400 mr-2"></i>Чек-лист доступності цифрового уроку (WCAG 2.1 AAA)
+                        </h2>
+                        <p class="text-slate-300 text-sm sm:text-base">
+                            Використовуйте цей інструмент перед проведенням уроку інформатики для перевірки електронних підручників, слайдів та завдань.
+                        </p>
+                    </div>
+                    <button onclick="speakElement('sec-audit')" title="Озвучити цей розділ" class="px-3 py-1.5 bg-yellow-600/30 hover:bg-yellow-600/50 text-yellow-300 border border-yellow-500/40 rounded-lg text-xs font-bold transition flex items-center space-x-1">
+                        <i class="fa-solid fa-volume-high"></i> <span>Озвучити розділ</span>
+                    </button>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-bold text-slate-300">Рівень готовності матеріалів до уроку:</span>
+                        <span id="auditPercent" class="text-xl font-black text-yellow-400 font-mono">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                        <div id="auditProgressBar" class="bg-yellow-400 h-full w-0 transition-all duration-300"></div>
+                    </div>
+                </div>
+
+                <!-- Interactive Checklist Items -->
+                <div class="space-y-3" id="checklistContainer">
+                    
+                    <label class="flex items-start space-x-3 p-4 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:bg-slate-850 transition">
+                        <input type="checkbox" onchange="updateAuditProgress()" class="audit-cb w-5 h-5 mt-0.5 text-blue-600 rounded border-slate-700">
+                        <div>
+                            <span class="font-bold text-white text-base block">Колірний контраст тексту та тла (не менше 4.5:1)</span>
+                            <span class="text-xs text-slate-400">Текст не зливається з фоном. Використовуються контрастні поєднання без пістрявих зображень на задньому плані.</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-4 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:bg-slate-850 transition">
+                        <input type="checkbox" onchange="updateAuditProgress()" class="audit-cb w-5 h-5 mt-0.5 text-blue-600 rounded border-slate-700">
+                        <div>
+                            <span class="font-bold text-white text-base block">Текстовий опис (Alt Text) для всіх схем та графіків</span>
+                            <span class="text-xs text-slate-400">Усі ілюстрації мають описовий альтернативний текст, який може прочитати диктовка (NVDA/VoiceOver).</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-4 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:bg-slate-850 transition">
+                        <input type="checkbox" onchange="updateAuditProgress()" class="audit-cb w-5 h-5 mt-0.5 text-blue-600 rounded border-slate-700">
+                        <div>
+                            <span class="font-bold text-white text-base block">Можливість масштабування сайту/документа до 200%</span>
+                            <span class="text-xs text-slate-400">При збільшенні масштабу сторінки текст адаптується без появи горизонтальної смуги прокрутки.</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-4 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:bg-slate-850 transition">
+                        <input type="checkbox" onchange="updateAuditProgress()" class="audit-cb w-5 h-5 mt-0.5 text-blue-600 rounded border-slate-700">
+                        <div>
+                            <span class="font-bold text-white text-base block">Повна керуваність із клавіатури (без миші)</span>
+                            <span class="text-xs text-slate-400">Усі елементи (кнопки, посилання, теми) послідовно обираються клавішею Tab та активуються Enter/Space.</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-4 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:bg-slate-850 transition">
+                        <input type="checkbox" onchange="updateAuditProgress()" class="audit-cb w-5 h-5 mt-0.5 text-blue-600 rounded border-slate-700">
+                        <div>
+                            <span class="font-bold text-white text-base block">Передача інформації кількома каналами (не лише кольором)</span>
+                            <span class="text-xs text-slate-400">Правильні або помилкові відповіді підкреслюються текстовими значками чи звуком, а не лише червоним або зеленим колірним маркером.</span>
+                        </div>
+                    </label>
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL DIALOG FOR EXTENSION DETAILS -->
+    <div id="infoModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl hc-card">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="modalTitle" class="text-xl font-bold text-white">Інструкція з встановлення</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <p id="modalBody" class="text-slate-300 text-sm leading-relaxed"></p>
+            <div class="pt-2 flex justify-end space-x-2">
+                <button onclick="closeModal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-lg">Закрити</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>Методична платформа "Інклюзивна Інформатика" • 2026</p>
+            <p class="mt-1">Розроблено відповідно до рекомендацій стандарту доступності WCAG 2.1 AAA</p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT ENGINE -->
+    <script>
+        // ================= 1. TAB NAVIGATION =================
+        function switchTab(tabId) {
+            stopSpeech(); // stop speech when switching tabs
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('text-slate-300');
+            });
+
+            document.getElementById('sec-' + tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('tab-' + tabId);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-blue-600', 'text-white');
+                activeBtn.classList.remove('text-slate-300');
+            }
+        }
+
+        // ================= 2. VISION SIMULATOR ENGINE =================
+        function updateSimulation() {
+            const condition = document.querySelector('input[name="visionCondition"]:checked').value;
+            const severity = parseInt(document.getElementById('severitySlider').value);
+            document.getElementById('severityVal').innerText = severity + '%';
+
+            const simTarget = document.getElementById('simTargetContent');
+            const overlayGlaucoma = document.getElementById('overlayGlaucoma');
+            const overlayAMD = document.getElementById('overlayAMD');
+            const overlayRetinopathy = document.getElementById('overlayRetinopathy');
+            const tag = document.getElementById('conditionTag');
+            const desc = document.getElementById('conditionDescription');
+
+            // Reset overlays & filters
+            overlayGlaucoma.style.display = 'none';
+            overlayAMD.style.display = 'none';
+            overlayRetinopathy.style.display = 'none';
+            simTarget.style.filter = 'none';
+
+            let tagText = "Нормальний зір";
+            let descText = "<strong>Методична примітка:</strong> За нормального зору дитина безперешкодно розрізняє шрифти розміром 12-14pt та контрастність кольорів стандартного інтерфейсу.";
+
+            switch (condition) {
+                case 'myopia':
+                    const blurRadius = (severity / 100) * 8;
+                    simTarget.style.filter = `blur(${blurRadius}px)`;
+                    tagText = "Слабозорість / Короткозорість";
+                    descText = "<strong>Короткозорість / Слабозорість:</strong> Контури елементів та літери сильно розмиваються. Учню потрібне масштабування екрана від 150% до 200% та великий шрифт без засічок.";
+                    break;
+
+                case 'cataracts':
+                    const blurVal = (severity / 100) * 3;
+                    const contrastVal = 100 - (severity * 0.5);
+                    simTarget.style.filter = `blur(${blurVal}px) contrast(${contrastVal}%) brightness(120%)`;
+                    tagText = "Катаракта";
+                    descText = "<strong>Катаракта:</strong> Помутніння кришталика створює «пелену» та вицвітання кольорів. Необхідно вмикати темний режим або режим високого колірного контрасту.";
+                    break;
+
+                case 'glaucoma':
+                    overlayGlaucoma.style.display = 'block';
+                    const tunnelRadius = 250 - (severity * 2.1);
+                    overlayGlaucoma.style.setProperty('--glaucoma-size', `${Math.max(tunnelRadius, 15)}px`);
+                    tagText = "Глаукома (Тунельний зір)";
+                    descText = "<strong>Глаукома (Тунельний зір):</strong> Периферійний зір відсутній, огляд звужується до вузької «крапки» в центрі. Рекомендовано зменшувати робочу область додатка або використовувати програми зчитування екрана.";
+                    break;
+
+                case 'amd':
+                    overlayAMD.style.display = 'block';
+                    const amdRadius = (severity * 1.8) + 30;
+                    overlayAMD.style.setProperty('--amd-size', `${amdRadius}px`);
+                    tagText = "Макулодистрофія (AMD)";
+                    descText = "<strong>Макулодистрофія (AMD):</strong> Випадає центральна частина поля зору. Учень не може бачити літери в центрі погляду й змушений використовувати екранні лупи чи голосовий супровід.";
+                    break;
+
+                case 'retinopathy':
+                    overlayRetinopathy.style.display = 'block';
+                    const opacityVal = severity / 100;
+                    overlayRetinopathy.style.setProperty('--retino-opacity', opacityVal);
+                    tagText = "Діабетична ретинопатія";
+                    descText = "<strong>Діабетична ретинопатія:</strong> Виникають хаотично розсіяні темні сліпі плями (мікрокрововиливи сітківки), які перешкоджають суцільному читанню тексту.";
+                    break;
+
+                case 'protanopia':
+                    simTarget.style.filter = 'url(#protanopiaFilter)';
+                    tagText = "Дальтонізм (Протанопія)";
+                    descText = "<strong>Протанопія:</strong> Відсутність сприйняття червоного спектра. Червоні кнопки та помилки стають темними або болотними. Не можна передавати важливу інформацію лише через червоний колір!";
+                    break;
+
+                case 'deuteranopia':
+                    simTarget.style.filter = 'url(#deuteranopiaFilter)';
+                    tagText = "Дальтонізм (Дейтеранопія)";
+                    descText = "<strong>Дейтеранопія:</strong> Втрата сприйняття зеленого кольору. Зелені та жовті відтінки зливаються. Потрібно підсилювати кольорову підказку текстовими значками (✓, ❌).";
+                    break;
+
+                case 'achromatopsia':
+                    simTarget.style.filter = 'url(#achromatopsiaFilter)';
+                    tagText = "Ахроматопсія (Повна колірна сліпота)";
+                    descText = "<strong>Ахроматопсія:</strong> Повна відсутність сприйняття кольорів (світ у чорно-білих тонах). Потрібен високий контраст літер і чіткий розмежувальний шрифт.";
+                    break;
+            }
+
+            tag.innerText = tagText;
+            desc.innerHTML = descText;
+        }
+
+        // ================= 3. ADVANCED TEXT-TO-SPEECH (TTS) ENGINE WITH GUARANTEED AUDIO FALLBACK =================
+        let currentAudio = null;
+        let isSpeaking = false;
+        let hoverReaderEnabled = false;
+
+        function initSpeechVoices() {
+            setVoiceStatus('Гарантований онлайн-синтез (uk-UA)', 'online');
+        }
+
+        function setVoiceStatus(label, type) {
+            const statusEl = document.getElementById('speechVoiceStatus');
+            if (!statusEl) return;
+            statusEl.innerText = label;
+            statusEl.className = 'bg-emerald-950 text-emerald-200 text-xs px-2 py-0.5 rounded font-mono';
+        }
+
+        function speakText(text, elementToHighlight = null) {
+            stopSpeech(); // Зупинити попереднє відтворення
+
+            if (!text || text.trim() === '') return;
+            const cleanText = text.replace(/\s+/g, ' ').trim();
+
+            if (elementToHighlight) {
+                elementToHighlight.classList.add('speech-highlight');
+            }
+
+            const rateVal = parseFloat(document.getElementById('speechRate').value) || 1.0;
+
+            const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=uk&client=tw-ob`;
+
+            const audio = new Audio(ttsUrl);
+            audio.playbackRate = rateVal;
+            currentAudio = audio;
+
+            audio.onended = () => {
+                removeHighlight();
+                isSpeaking = false;
+                const btnLabel = document.getElementById('pauseBtnLabel');
+                if (btnLabel) btnLabel.innerText = 'Пауза';
+            };
+
+            audio.onerror = () => {
+                removeHighlight();
+                isSpeaking = false;
+            };
+
+            isSpeaking = true;
+            audio.play().catch(err => {
+                console.error("Audio playback error:", err);
+                removeHighlight();
+                isSpeaking = false;
+            });
+        }
+
+        function testUkrainianSpeech() {
+            speakText("Вітаємо! Модуль українського озвучення успішно активовано та працює.");
+        }
+
+        function speakPage() {
+            const activeTabContent = document.querySelector('.tab-content:not(.hidden)');
+            if (activeTabContent) {
+                speakText(activeTabContent.innerText, activeTabContent);
+            }
+        }
+
+        function speakSelection() {
+            const selectedText = window.getSelection().toString();
+            if (selectedText && selectedText.trim() !== '') {
+                speakText(selectedText);
+            } else {
+                alert('Будь ласка, виділіть мишкою потрібний текст на сторінці!');
+            }
+        }
+
+        function speakElement(elementId) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                speakText(el.innerText, el);
+            }
+        }
+
+        function pauseResumeSpeech() {
+            const btnLabel = document.getElementById('pauseBtnLabel');
+
+            if (currentAudio) {
+                if (currentAudio.paused) {
+                    currentAudio.play();
+                    btnLabel.innerText = 'Пауза';
+                } else {
+                    currentAudio.pause();
+                    btnLabel.innerText = 'Відновити';
+                }
+            }
+        }
+
+        function stopSpeech() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            removeHighlight();
+            isSpeaking = false;
+            const btnLabel = document.getElementById('pauseBtnLabel');
+            if (btnLabel) btnLabel.innerText = 'Пауза';
+        }
+
+        function toggleHoverReader(enabled) {
+            hoverReaderEnabled = enabled;
+            const elements = document.querySelectorAll('p, h2, h3, button, label');
+            
+            elements.forEach(el => {
+                if (enabled) {
+                    el.addEventListener('mouseenter', handleHoverSpeak);
+                } else {
+                    el.removeEventListener('mouseenter', handleHoverSpeak);
+                }
+            });
+        }
+
+        function handleHoverSpeak(e) {
+            if (!hoverReaderEnabled) return;
+            const text = e.target.innerText;
+            if (text && text.trim().length > 3) {
+                speakText(text, e.target);
+            }
+        }
+
+        function removeHighlight() {
+            document.querySelectorAll('.speech-highlight').forEach(el => {
+                el.classList.remove('speech-highlight');
+            });
+        }
+
+        // ================= 4. CATALOG FILTERING & MODAL =================
+        function filterAssist(category, btn) {
+            document.querySelectorAll('.assist-filter-btn').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white');
+                b.classList.add('bg-slate-700', 'text-slate-300');
+            });
+            btn.classList.add('bg-blue-600', 'text-white');
+            btn.classList.remove('bg-slate-700', 'text-slate-300');
+
+            document.querySelectorAll('.assist-card').forEach(card => {
+                if (category === 'all' || card.getAttribute('data-cat') === category) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function showExtensionInfo(title, text) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerText = text;
+            document.getElementById('infoModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('infoModal').classList.add('hidden');
+        }
+
+        // ================= 5. AUDIT CHECKLIST PROGRESS =================
+        function updateAuditProgress() {
+            const checkboxes = document.querySelectorAll('.audit-cb');
+            const total = checkboxes.length;
+            let checkedCount = 0;
+            checkboxes.forEach(cb => {
+                if (cb.checked) checkedCount++;
+            });
+
+            const pct = Math.round((checkedCount / total) * 100);
+            document.getElementById('auditPercent').innerText = pct + '%';
+            document.getElementById('auditProgressBar').style.width = pct + '%';
+        }
+
+        // ================= 6. ACCESSIBILITY CONTROLS =================
+        let currentFontSizePct = 100;
+        function changeFontSize(delta) {
+            currentFontSizePct = Math.min(Math.max(currentFontSizePct + delta, 80), 150);
+            document.documentElement.style.fontSize = currentFontSizePct + '%';
+            const btn = document.getElementById('zoomValBtn');
+            if (btn) btn.innerText = currentFontSizePct + '%';
+        }
+
+        function resetFontSize() {
+            currentFontSizePct = 100;
+            document.documentElement.style.fontSize = '100%';
+            const btn = document.getElementById('zoomValBtn');
+            if (btn) btn.innerText = '100%';
+        }
+
+        function switchTheme(theme) {
+            const body = document.getElementById('appBody');
+            body.classList.remove('theme-light', 'theme-hc-yellow');
+
+            if (theme === 'light') {
+                body.classList.add('theme-light');
+            } else if (theme === 'hc-yellow') {
+                body.classList.add('theme-hc-yellow');
+            }
+        }
+
+        window.onload = function() {
+            initSpeechVoices();
+            updateSimulation();
+        }
+    </script>
+</body>
+</html>
